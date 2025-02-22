@@ -12,24 +12,117 @@ const initialInput: RiskPredictionInput = {
   projectComplexity: 'medium',
 };
 
+// Helper function to calculate risk score based on inputs
+const calculateRiskScore = (input: RiskPredictionInput): number => {
+  let score = 0;
+  
+  // Project size factor
+  switch (input.projectSize) {
+    case 'small': score += 10; break;
+    case 'medium': score += 20; break;
+    case 'large': score += 30; break;
+  }
+  
+  // Duration factor (longer projects are riskier)
+  score += Math.min(30, input.duration * 1.5);
+  
+  // Workforce availability factor (lower availability increases risk)
+  score += Math.max(0, (100 - input.workforceAvailability) * 0.5);
+  
+  // Supply chain stability factor
+  switch (input.supplyChainStability) {
+    case 'low': score += 30; break;
+    case 'medium': score += 15; break;
+    case 'high': score += 5; break;
+  }
+  
+  // Material cost volatility factor
+  switch (input.materialCostVolatility) {
+    case 'low': score += 5; break;
+    case 'medium': score += 15; break;
+    case 'high': score += 30; break;
+  }
+  
+  // Project complexity factor
+  switch (input.projectComplexity) {
+    case 'low': score += 5; break;
+    case 'medium': score += 20; break;
+    case 'high': score += 35; break;
+  }
+  
+  return score;
+};
+
+// Generate recommendations based on input factors
+const generateRecommendations = (input: RiskPredictionInput, score: number): string[] => {
+  const recommendations: string[] = [];
+  
+  if (input.workforceAvailability < 70) {
+    recommendations.push(`Increase workforce allocation by ${Math.round((70 - input.workforceAvailability) * 1.5)}%`);
+  }
+  
+  if (input.materialCostVolatility === 'high') {
+    recommendations.push('Implement material cost hedging strategies');
+    recommendations.push('Establish contracts with multiple suppliers to mitigate cost risks');
+  }
+  
+  if (input.supplyChainStability === 'low') {
+    recommendations.push('Develop backup supply chain routes');
+    recommendations.push('Maintain higher inventory levels for critical materials');
+  }
+  
+  if (input.projectComplexity === 'high') {
+    recommendations.push('Break down the project into smaller, manageable phases');
+    recommendations.push('Implement additional quality control checkpoints');
+  }
+  
+  if (input.duration > 18) {
+    recommendations.push('Consider a phased delivery approach');
+    recommendations.push('Establish quarterly project review milestones');
+  }
+  
+  // Always return at least 2 recommendations
+  if (recommendations.length < 2) {
+    recommendations.push('Maintain regular project status monitoring');
+    recommendations.push('Document and track all project changes');
+  }
+  
+  // Return 3-5 recommendations
+  return recommendations.slice(0, Math.min(5, Math.max(3, recommendations.length)));
+};
+
 export default function Prediction() {
   const [input, setInput] = useState<RiskPredictionInput>(initialInput);
   const [prediction, setPrediction] = useState<RiskPrediction | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulated prediction (replace with actual API call)
+    
+    const riskScore = calculateRiskScore(input);
+    
+    // Determine risk level and probability based on score
+    let riskLevel: 'low' | 'medium' | 'high';
+    let probability: number;
+    
+    if (riskScore < 60) {
+      riskLevel = 'low';
+      probability = Math.round((riskScore / 60) * 100);
+    } else if (riskScore < 100) {
+      riskLevel = 'medium';
+      probability = Math.round(((riskScore - 60) / 40) * 100);
+    } else {
+      riskLevel = 'high';
+      probability = Math.round(Math.min(((riskScore - 100) / 50) * 100 + 70, 100));
+    }
+    
     setPrediction({
-      riskLevel: 'medium',
-      probability: 65,
-      recommendations: [
-        'Consider increasing workforce allocation by 15%',
-        'Monitor material costs weekly for volatility',
-        'Implement additional quality control measures',
-      ],
+      riskLevel,
+      probability,
+      recommendations: generateRecommendations(input, riskScore),
     });
   };
 
+  // Rest of the component remains the same...
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div className="text-center">
@@ -45,6 +138,7 @@ export default function Prediction() {
         className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 space-y-6 transition-colors"
         onSubmit={handleSubmit}
       >
+        {/* Form inputs remain the same... */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
